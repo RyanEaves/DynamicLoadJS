@@ -2,13 +2,31 @@
 - DynamicElementSelector
   - Default: `#dynamicContent`
   - Description: Used to specify the name of the container that will be swapped on dynamic load
-
-        UseAPI: true,
-        APIUrlSalt: '/api/contentfilter/',
-        CallbackBeforeLoad: $.noop,
-        CallbackAfterLoadSuccess: $.noop,
-        CallbackAfterLoadFail: $.noop,
-        CallbackAfterLoadAlways: $.noop,
-        HttpHeaderNameDynamicElementSelector: 'X-DynamicLoad-Element-Selector',
-        HttpHeaderNamePageTitle: 'X-Page-Title',
-        SkipDynamicLoadSelector: '.SkipDynamicLoad'
+- SkipDynamicLoadSelector
+  - Default: `.SkipDynamicLoad`
+  - Description: Used to specify elements that will not be hijacked to perform a dynamic load
+- UseAPI
+  - Default: `true`
+  - Description: Identify whether requests will be made to a REST API or plain old pages
+- APIUrlSalt
+  - Default: `/api/contentfilter/`
+  - Description: Defines the change to the URL made to made a REST API request rather than a full page request.
+  - Example: `/api/contentfilter/` == `http://www.yourdomain.com/api/contentfilter/pageid`
+- HttpHeaderNameDynamicElementSelector
+  - Default: `X-DynamicLoad-Element-Selector`
+  - Description: Define the HTTP header used to send the value of DynamicElementSelector to the REST API
+- HttpHeaderNamePageTitle
+  - Default: `X-Page-Title`
+  - Description: Define the HTTP header used by the REST API to send the page title back to DynamicLoadJS
+- CallbackBeforeLoad
+  - Default: `null`
+  - Description: Define a function to callback before a dynamic load request is made for content 
+- CallbackAfterLoadSuccess
+  - Default: `null`
+  - Description: Define a function to callback after a dynamic load request is successfully made for content 
+- CallbackAfterLoadFail
+  - Default: `null`
+  - Description: Define a function to callback after a dynamic load request is made for content, but fails 
+- CallbackAfterLoadAlways
+  - Default: `null`
+  - Description: Define a function to callback after a dynamic load request is made for content, regardless of success
