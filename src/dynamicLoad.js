@@ -1,11 +1,13 @@
 ﻿var DynamicLoad = {
     PushStateSupport: false,
     BaseUrl: window.location.pathname,
+    CallbackAfterContentInjectDeclared: false,
     options: {
         DynamicElementSelector: '#dynamicContent',
         UseAPI: true,
         APIUrlSalt: '/api/contentfilter/',
         CallbackBeforeLoad: $.noop,
+        CallbackAfterContentInject: $.noop,
         CallbackAfterLoadSuccess: $.noop,
         CallbackAfterLoadFail: $.noop,
         CallbackAfterLoadAlways: $.noop,
@@ -23,6 +25,10 @@
             this.options.UseAPI = settings.UseAPI;
         if (typeof settings.CallbackBeforeLoad === 'function' && settings.CallbackBeforeLoad())
             this.options.CallbackBeforeLoad = settings.CallbackBeforeLoad;
+        if (typeof settings.CallbackAfterContentInject === 'function' && settings.CallbackAfterContentInject()) {
+            this.options.CallbackAfterContentInject = settings.CallbackAfterContentInject;
+            this.CallbackAfterContentInjectDeclared = true;
+        }
         if (typeof settings.CallbackAfterLoadSuccess === 'function' && settings.CallbackAfterLoadSuccess())
             this.options.CallbackAfterLoadSuccess = settings.CallbackAfterLoadSuccess;
         if (typeof settings.CallbackAfterLoadFail === 'function' && settings.CallbackAfterLoadFail())
@@ -86,15 +92,22 @@
             url: loadUrl,
             dataType: 'html',
             beforeSend: function (jqXHR, settings) {
-                jqXHR.setRequestHeader(context.options.HttpHeaderNameDynamicElementSelector, context.options.dynamicElementSelector);
+                jqXHR.setRequestHeader(
+                    context.options.HttpHeaderNameDynamicElementSelector,
+                    context.options.dynamicElementSelector
+                );
             },
             success: function (data, textStatus, jqXHR) {
                 //Workaround to prevent jQuery from removing script tags from response
-                var response = data.replace(/(<script)((.|\s)*?)(<\/script>)/gi, '<scripthack$2</scripthack>');
+                var tempScriptTag = 'scripthack' + Math.floor((Math.random() * 100000) + 1); //Use a random number in the temp script tag to prevent injection of 'scripthack' tags
+                var response = data.replace(/(<script )((.|\s)*?)(<\/script>)/ig, '<' + tempScriptTag + ' $2</' + tempScriptTag + '>');
+                console.log(response);
                 //load the response DOM
                 var $response = $(response);
                 //Update the title tag
-                document.title = (context.options.UseAPI) ? jqXHR.getResponseHeader(context.options.HttpHeaderNamePageTitle) : $response.filter('title').text();
+                document.title = (context.options.UseAPI) ?
+                    jqXHR.getResponseHeader(context.options.HttpHeaderNamePageTitle) :
+                    $response.filter('title').text();
                 //Capture content
                 if (context.options.UseAPI) {
                     $dynamicContent = $response;
@@ -107,27 +120,38 @@
                     console.log('Loaded content not dynamic, try again.');
                 }
                 //Capture scripts
-                var $scripts = $dynamicContent.find('scripthack');
+                var $scripts = $dynamicContent.find(tempScriptTag);
                 //Remove scripthack from DOM
-                $dynamicContent.find('scripthack').remove();
+                $dynamicContent.find(tempScriptTag).remove();
                 //Inject html
-                $(context.options.DynamicElementSelector).html($dynamicContent.html());
-                //Execute Scripts
-                $.each($scripts, function (index, script) {
-                    //Load inline and external scripts
-                    var url = $(script).attr('src');
-                    var scriptType = $(script).attr('type');
-
-                    if (scriptType == 'text/html') { //inject script knockout templates
-                        var scriptString = $(script).wrap("<div></div>").parent().html().replace(/(<scripthack)((.|\s)*?)(<\/scripthack>)/gi, '<script$2</script>')
-                        $(context.options.DynamicElementSelector).append(scriptString);
-                    }
-                    else if (url == null) { $.globalEval($(script).text()); } // Execute inline scripts
-                    else if (url != null) { $.getScript(url, function (data, textStatus, jqxhr) {}); } //Load extenal scripts
-                });
-
-                context.overrideAnchors();
-                context.options.CallbackAfterLoadSuccess.call(context, State.data.url);
+                if (context.CallbackAfterContentInjectDeclared == true) {
+                    $dynamicContent.hide();
+                    $dynamicContent.insertAfter($(context.options.DynamicElementSelector));
+                    context.options.CallbackAfterContentInject.call(
+                        context,
+                        State.data.url,
+                        $(context.options.DynamicElementSelector),
+                        $dynamicContent,
+                        function () {
+                            $(context.options.DynamicElementSelector).remove();
+                            $dynamicContent.show();
+                            context._completeLoad(
+                                context,
+                                State.data.url,
+                                $scripts,
+                                tempScriptTag
+                            );
+                        });
+                }
+                else {
+                    $(context.options.DynamicElementSelector).html($dynamicContent.html());
+                    context._completeLoad(
+                            context,
+                            State.data.url,
+                            $scripts,
+                            tempScriptTag
+                        );
+                }
             },
             error: function (jqXHR, textStatus, errorThrown) {
                 console.log('There was an error loading the page [' + textStatus + '] Message: ' + errorThrown);
@@ -137,5 +161,25 @@
                 context.options.CallbackAfterLoadAlways.call(context, State.data.url);
             }
         });
+    },
+
+    _completeLoad: function (context, url, $scripts, tempScriptTag) {
+        //Execute Scripts
+        $.each($scripts, function (index, script) {
+            //Load inline and external scripts
+            var jsUrl = $(script).attr('src');
+            var scriptType = $(script).attr('type');
+
+            if (scriptType == 'text/html') { //inject script MVVM templates
+                var regEx = new RegExp('(<' + tempScriptTag + ')((.|\\s)*?)(<\/' + tempScriptTag + '>)', 'ig');
+                var scriptString = $(script).wrap('<div></div>').parent().html()
+                    .replace(regEx, '<script$2</script>');
+                $(context.options.DynamicElementSelector).append(scriptString);
+            }
+            else if (jsUrl == null) { $.globalEval($(script).text()); } // Execute inline scripts
+            else if (jsUrl != null) { $.getScript(jsUrl, function (data, textStatus, jqxhr) { }); } //Load extenal scripts
+        });
+        context.overrideAnchors();
+        context.options.CallbackAfterLoadSuccess.call(context, url);
     }
 };

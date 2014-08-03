@@ -20,13 +20,31 @@
   - Description: Define the HTTP header used by the REST API to send the page title back to DynamicLoadJS
 - CallbackBeforeLoad
   - Default: `null`
+  - Parameters:
+    - *Url*: The path portion of the requested url 
   - Description: Define a function to callback before a dynamic load request is made for content 
+-  CallbackAfterContentInject
+  - Default `null`
+  - Parameters:
+    - *Url*: The path portion of the requested url
+    - *$oldContainer*: A jQuery object of the old container that will be replaced
+    - *$newContainer*: A jQuery object of the new container that will replace the old container
+    - *callback*: This is a reference to callback to dynamicLoadJS. This must be executed when the transition is complete.
+      - Example: `callback();`
+ $oldContainer, $newContainer, callback
+  - Description: Use to allow the complate control of the transition. In this event
 - CallbackAfterLoadSuccess
   - Default: `null`
+  - Parameters:
+    - *Url*: The path portion of the requested url 
   - Description: Define a function to callback after a dynamic load request is successfully made for content 
 - CallbackAfterLoadFail
   - Default: `null`
+  - Parameters:
+    - *Url*: The path portion of the requested url 
   - Description: Define a function to callback after a dynamic load request is made for content, but fails 
 - CallbackAfterLoadAlways
   - Default: `null`
+  - Parameters:
+    - *Url*: The path portion of the requested url 
   - Description: Define a function to callback after a dynamic load request is made for content, regardless of success
