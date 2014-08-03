@@ -31,7 +31,6 @@
     - *$newContainer*: A jQuery object of the new container that will replace the old container
     - *callback*: This is a reference to callback to dynamicLoadJS. This must be executed when the transition is complete.
       - Example: `callback();`
- $oldContainer, $newContainer, callback
   - Description: Use to allow the complate control of the transition. In this event
 - CallbackAfterLoadSuccess
   - Default: `null`
